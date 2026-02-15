@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>Mini Love Maze</title>
+
+<style>
+  :root{
+    --bgA:#ff4d8d; --bgB:#7c4dff; --bgC:#32e6e2;
+    --card:#ffffffcc; --ink:#141414; --shadow: 0 24px 60px rgba(0,0,0,.22);
+    --radius:22px;
+
+    --yesBorder:#00000018;
+    --no1:#ff7aa8; --no2:#ff2f67;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink);
+    overflow:hidden;
+    background:
+      radial-gradient(900px 500px at 15% 15%, #ffffff33, transparent 55%),
+      radial-gradient(900px 500px at 85% 20%, #ffffff22, transparent 55%),
+      radial-gradient(900px 500px at 40% 90%, #ffffff22, transparent 55%),
+      linear-gradient(135deg, var(--bgA), var(--bgB), var(--bgC));
+    background-size: 200% 200%;
+    animation: bgMove 10s ease-in-out infinite alternate;
+  }
+  @keyframes bgMove{ 0%{background-position:0% 0%} 100%{background-position:100% 100%} }
+
+  .app{ width:min(980px, 96vw); margin:22px auto; }
+
+  .card{
+    background:var(--card);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.55);
+    box-shadow:var(--shadow);
+    border-radius:var(--radius);
+    padding:22px;
+    position:relative;
+    overflow:hidden;
+  }
+  .shine{
+    position:absolute; inset:-120px;
+    background:
+      radial-gradient(circle at 30% 20%, #ffffff55 0 80px, transparent 140px),
+      radial-gradient(circle at 80% 60%, #ffffff33 0 90px, transparent 150px);
+    transform: rotate(10deg);
+    pointer-events:none;
+  }
+
+  .title{ margin:0; text-align:center; font-size: clamp(24px, 4vw, 44px); }
+  .subtitle{ margin:10px 0 0; text-align:center; opacity:.86; font-size: clamp(13px, 2.1vw, 16px); line-height:1.35; }
+
+  .cute{
+    width: 180px; height: 120px; margin: 16px auto 0;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 72px;
+    filter: drop-shadow(0 14px 14px rgba(0,0,0,.18));
+    animation: float 2.8s ease-in-out infinite;
+  }
+  @keyframes float{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+  .btnArea{
+    width:min(520px, 92vw);
+    margin: 18px auto 0;
+    position:relative;
+    height: 64px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+  }
+  .btn{
+    border:0;
+    padding:12px 18px;
+    border-radius:16px;
+    font-weight:900;
+    cursor:pointer;
+    user-select:none;
+    transition: transform .14s ease, filter .14s ease, box-shadow .14s ease;
+    box-shadow: 0 10px 26px rgba(0,0,0,.15);
+    white-space:nowrap;
+  }
+  .btn:active{ transform: scale(.98); }
+
+  .btn-yes{
+    background:#fff;
+    color:#111;
+    border: 1px solid var(--yesBorder);
+  }
+  .btn-no{
+    background: linear-gradient(180deg, var(--no1), var(--no2));
+    color:#fff;
+    position:absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    will-change: transform;
+  }
+
+  .hidden{ display:none; }
+  .fadeIn{ animation: fade .28s ease both; }
+  @keyframes fade{ from{opacity:0; transform:translateY(8px) scale(.99)} to{opacity:1; transform:translateY(0) scale(1)} }
+
+  .topRow{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; flex-wrap:wrap;
+  }
+  .pill{
+    display:inline-flex; gap:8px; align-items:center;
+    padding:8px 12px; border-radius:999px;
+    background:#fff; border:1px solid #00000010; font-weight:900;
+  }
+
+  .gameWrap{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap:16px;
+    align-items:start;
+    margin-top:16px;
+  }
+  @media (min-width: 920px){
+    .gameWrap{ grid-template-columns: 1fr 340px; }
+  }
+
+  canvas{
+    width:min(560px, 92vw);
+    height:auto;
+    display:block;
+    margin: 10px auto 0;
+    border-radius: 22px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.22);
+    background:#fff;
+    border: 2px solid rgba(255,255,255,.55);
+    touch-action: none;
+  }
+
+  .panel{ background:rgba(255,255,255,.84); }
+  .panel h3{ margin:0 0 10px; }
+  .panel p{ margin:8px 0; line-height:1.45; }
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .btn-ghost{ background:#f6f6f6; border:1px solid #00000012; box-shadow:none; font-weight:900; }
+  .small{ font-size:12px; opacity:.75; }
+
+  .dpadWrap{ display:flex; justify-content:center; margin-top:14px; }
+  .dpad{
+    display:grid;
+    grid-template-columns: 64px 64px 64px;
+    grid-template-rows: 64px 64px 64px;
+    gap:10px;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action: manipulation;
+  }
+  .pad{
+    width:64px; height:64px;
+    border-radius:18px;
+    background: rgba(255,255,255,.94);
+    border:1px solid #00000010;
+    box-shadow: 0 14px 30px rgba(0,0,0,.16);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 22px; font-weight: 900;
+    cursor:pointer;
+    transition: transform .12s ease, filter .12s ease;
+  }
+  .pad:active{ transform: scale(.97); filter: brightness(.98); }
+  .pad.blank{ background:transparent; border:0; box-shadow:none; cursor:default; }
+
+  .overlay{
+    position:fixed; inset:0;
+    background: radial-gradient(700px 400px at 50% 30%, #ffffffcc, #00000085);
+    display:none; align-items:center; justify-content:center;
+    padding:20px; z-index:50;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    width:min(720px, 96vw);
+    border-radius: 26px;
+    padding: 22px;
+    background: #fff;
+    box-shadow: 0 34px 90px rgba(0,0,0,.35);
+    position:relative;
+    overflow:hidden;
+  }
+  .sparkle{
+    position:absolute; inset:-40px;
+    background:
+      radial-gradient(circle at 12% 20%, #ff3b6a55 0 14px, transparent 15px),
+      radial-gradient(circle at 80% 35%, #00d4ff66 0 12px, transparent 13px),
+      radial-gradient(circle at 55% 85%, #21d97a55 0 16px, transparent 17px);
+    filter: blur(2px);
+    pointer-events:none;
+  }
+  .modal h2{ margin:0 0 10px; }
+  .modal p{ margin:10px 0; line-height:1.6; white-space:pre-line; }
+
+  @keyframes shakeX{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
+  .shake{ animation: shakeX .16s ease; }
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- QUESTION -->
+  <div id="startScreen" class="card fadeIn">
+    <div class="shine"></div>
+    <h1 class="title">I Have a Question for You 💌</h1>
+    <p class="subtitle">Will you play this little game for me?</p>
+    <div class="cute" aria-hidden="true">💞🐻</div>
+
+    <div class="btnArea" id="btnArea">
+      <button class="btn btn-yes" id="yesBtn">Yes, show me 💖</button>
+      <button class="btn btn-no" id="noBtn">No 😅</button>
+    </div>
+
+    <p class="subtitle" style="margin-top:14px">Tip: Try to catch the “No” button 😼</p>
+  </div>
+
+  <!-- GAME -->
+  <div id="gameScreen" class="card hidden">
+    <div class="shine"></div>
+
+    <div class="topRow">
+      <span class="pill">🎮 Mini Love Maze</span>
+      <span class="pill">Solvable Hard Mode ✅</span>
+    </div>
+
+    <div class="gameWrap">
+      <div>
+        <canvas id="c" width="560" height="560"></canvas>
+
+        <div class="dpadWrap">
+          <div class="dpad" aria-label="mobile controls">
+            <div class="pad blank"></div>
+            <div class="pad" data-dir="up">⬆️</div>
+            <div class="pad blank"></div>
+
+            <div class="pad" data-dir="left">⬅️</div>
+            <div class="pad" data-dir="down">⬇️</div>
+            <div class="pad" data-dir="right">➡️</div>
+
+            <div class="pad blank"></div>
+            <div class="pad" id="resetBtn">🔄</div>
+            <div class="pad blank"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card panel">
+        <h3>🕹️ How to Play (Bangla)</h3>
+        <p>
+          • তুমি Arrow Keys (↑ ↓ ← →) অথবা W A S D দিয়ে খেলতে পারবে।<br>
+          • মোবাইলে হলে নিচের Arrow বোতামগুলো চাপ দিয়ে খেলো (⬆️⬇️⬅️➡️)।<br>
+          • লক্ষ্য: 🐱 থেকে ❤️ পর্যন্ত পৌঁছানো। (এই maze solvable ✅)
+        </p>
+
+        <div class="actions">
+          <button class="btn btn-ghost" id="exitBtn">🚪 Exit</button>
+          <button class="btn btn-yes" id="demoWinBtn">Finish Demo ✅</button>
+        </div>
+
+        <p class="small">One file (index.html). Easy free hosting.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REWARD -->
+<div id="overlay" class="overlay">
+  <div class="modal">
+    <div class="sparkle"></div>
+    <h2>🎉 You did it!</h2>
+    <p id="finalMsg"></p>
+    <div class="actions">
+      <button class="btn btn-yes" id="playAgainBtn">Play again</button>
+      <button class="btn btn-ghost" id="closeBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/** TEXT **/
+const FINAL_MESSAGE =
+`You reached my heart 💖
+
+I made this little game just for you.
+Now that you completed it...
+
+Will you be mine? 🌹✨`;
+
+/** DOM **/
+const startScreen = document.getElementById("startScreen");
+const gameScreen  = document.getElementById("gameScreen");
+const overlay     = document.getElementById("overlay");
+const finalMsg    = document.getElementById("finalMsg");
+const yesBtn      = document.getElementById("yesBtn");
+const noBtn       = document.getElementById("noBtn");
+const btnArea     = document.getElementById("btnArea");
+
+document.getElementById("resetBtn").addEventListener("click", resetGame);
+document.getElementById("exitBtn").addEventListener("click", () => {
+  gameScreen.classList.add("hidden");
+  startScreen.classList.remove("hidden");
+  startScreen.classList.add("fadeIn");
+  resetNoButton();
+  resetGame();
+});
+document.getElementById("demoWinBtn").addEventListener("click", win);
+
+document.getElementById("closeBtn").addEventListener("click", closeWin);
+document.getElementById("playAgainBtn").addEventListener("click", closeWin);
+
+/** Screen switch **/
+yesBtn.addEventListener("click", () => {
+  startScreen.classList.add("hidden");
+  gameScreen.classList.remove("hidden");
+  gameScreen.classList.add("fadeIn");
+  draw();
+});
+
+/** Smooth bounded “No” **/
+function resetNoButton(){
+  noBtn.style.transition = "transform 220ms cubic-bezier(.2,.8,.2,1)";
+  noBtn.style.left = "70%";
+  noBtn.style.top  = "50%";
+  noBtn.style.transform = "translate(-50%, -50%)";
+}
+resetNoButton();
+
+function moveNoButton(){
+  const area = btnArea.getBoundingClientRect();
+  const b = noBtn.getBoundingClientRect();
+  const pad = 8;
+
+  const maxX = area.width  - b.width  - pad;
+  const maxY = area.height - b.height - pad;
+
+  const x = pad + Math.random() * Math.max(0, maxX - pad);
+  const y = pad + Math.random() * Math.max(0, maxY - pad);
+
+  noBtn.style.left = "0px";
+  noBtn.style.top  = "0px";
+  noBtn.style.transform = `translate(${x}px, ${y}px)`;
+  noBtn.style.transition = "transform 240ms cubic-bezier(.2,.85,.2,1)";
+}
+
+noBtn.addEventListener("mouseenter", moveNoButton);
+noBtn.addEventListener("click", moveNoButton);
+noBtn.addEventListener("touchstart", (e)=>{ e.preventDefault(); moveNoButton(); }, {passive:false});
+
+/** ========= SOLVABLE MAZE =========
+ * I explicitly carved a guaranteed path from start (1,1) to goal (N-2,N-2),
+ * then added dead-ends for difficulty.
+ **/
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+// 23x23 (odd size helps maze feel)
+const N = 23;
+// 0 wall, 1 path
+let grid = Array.from({length:N}, ()=>Array(N).fill(0));
+
+// carve function
+function open(x,y){ grid[y][x]=1; }
+
+// start & goal
+const START = {x:1,y:1};
+const GOAL  = {x:N-2,y:N-2};
+
+// Step 1: carve a guaranteed winding path
+function carveGuaranteedPath(){
+  let x=START.x, y=START.y;
+  open(x,y);
+
+  // Predefined sequence of moves that stays in bounds and ends at GOAL
+  const moves = [];
+  // create a snake-like path
+  for(let row=1; row<=N-2; row+=2){
+    // go right
+    for(let i=0;i<N-3;i++) moves.push([1,0]);
+    // go down (two steps) except last
+    if(row < N-2){
+      moves.push([0,1]);
+      moves.push([0,1]);
+      // go left
+      for(let i=0;i<N-3;i++) moves.push([-1,0]);
+      // go down (two steps)
+      if(row+2 < N-2){
+        moves.push([0,1]);
+        moves.push([0,1]);
+      }
+    }
+  }
+
+  // apply moves but clamp to goal area
+  for(const [dx,dy] of moves){
+    const nx = x+dx, ny = y+dy;
+    if(nx<1||ny<1||nx>N-2||ny>N-2) continue;
+    x=nx; y=ny;
+    open(x,y);
+  }
+
+  // ensure goal is open (connect with last steps)
+  open(GOAL.x, GOAL.y);
+  // connect near goal
+  open(GOAL.x-1, GOAL.y);
+  open(GOAL.x, GOAL.y-1);
+}
+carveGuaranteedPath();
+
+// Step 2: add dead-ends & side paths (difficulty) but keep solvable
+function addBranches(){
+  function randInt(a,b){ return Math.floor(a+Math.random()*(b-a+1)); }
+
+  // create random branches from existing path cells
+  const attempts = 180;
+  for(let t=0;t<attempts;t++){
+    const x = randInt(1,N-2);
+    const y = randInt(1,N-2);
+    if(grid[y][x]!==1) continue;
+
+    // choose direction
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    const [dx,dy] = dirs[randInt(0,3)];
+    const len = randInt(2,5);
+
+    let bx=x, by=y;
+    for(let i=0;i<len;i++){
+      const nx=bx+dx, ny=by+dy;
+      if(nx<1||ny<1||nx>N-2||ny>N-2) break;
+      // avoid carving huge open areas
+      open(nx,ny);
+      bx=nx; by=ny;
+    }
+  }
+
+  // add some “walls back” effect by keeping most cells closed
+  // (we already started with all walls, so branches only open small parts)
+}
+addBranches();
+
+const cell = canvas.width / N;
+
+let player = {x:START.x, y:START.y};
+let goal   = {x:GOAL.x, y:GOAL.y};
+
+function resetGame(){
+  player = {x:START.x, y:START.y};
+  draw();
+}
+resetGame();
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "rgba(255,255,255,0.70)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  for(let y=0;y<N;y++){
+    for(let x=0;x<N;x++){
+      const px=x*cell, py=y*cell;
+      if(grid[y][x]===0){
+        const t=(x+y)/(2*N);
+        ctx.fillStyle = `hsl(${200 + t*110}, 95%, 55%)`;
+        ctx.fillRect(px,py,cell,cell);
+      }else{
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(px,py,cell,cell);
+        ctx.fillStyle = "rgba(0,0,0,0.03)";
+        ctx.fillRect(px+cell*0.45, py+cell*0.45, cell*0.1, cell*0.1);
+      }
+    }
+  }
+
+  ctx.font = `${Math.floor(cell*0.82)}px system-ui`;
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.fillText("❤️", goal.x*cell + cell/2, goal.y*cell + cell/2);
+  ctx.fillText("🐱", player.x*cell + cell/2, player.y*cell + cell/2);
+
+  ctx.lineWidth=4;
+  ctx.strokeStyle="rgba(255,255,255,.7)";
+  ctx.strokeRect(2,2,canvas.width-4,canvas.height-4);
+}
+
+function canMove(nx,ny){
+  if(nx<0||ny<0||nx>=N||ny>=N) return false;
+  return grid[ny][nx]===1;
+}
+function move(dx,dy){
+  const nx=player.x+dx, ny=player.y+dy;
+  if(canMove(nx,ny)){
+    player.x=nx; player.y=ny;
+    draw();
+    if(player.x===goal.x && player.y===goal.y) win();
+  }else{
+    canvas.classList.remove("shake");
+    void canvas.offsetWidth;
+    canvas.classList.add("shake");
+  }
+}
+
+/** keyboard */
+window.addEventListener("keydown",(e)=>{
+  if(gameScreen.classList.contains("hidden")) return;
+  const k=e.key.toLowerCase();
+  if(k==="arrowup"||k==="w") move(0,-1);
+  else if(k==="arrowdown"||k==="s") move(0,1);
+  else if(k==="arrowleft"||k==="a") move(-1,0);
+  else if(k==="arrowright"||k==="d") move(1,0);
+});
+
+/** Mobile D-pad (tap + hold) */
+let holdTimer=null;
+function startHoldMove(dx,dy){
+  move(dx,dy);
+  stopHoldMove();
+  holdTimer=setInterval(()=>move(dx,dy),120);
+}
+function stopHoldMove(){
+  if(holdTimer) clearInterval(holdTimer);
+  holdTimer=null;
+}
+document.querySelectorAll(".pad[data-dir]").forEach(btn=>{
+  const dir=btn.getAttribute("data-dir");
+  const map={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
+  const [dx,dy]=map[dir];
+
+  btn.addEventListener("mousedown",()=>startHoldMove(dx,dy));
+  window.addEventListener("mouseup",stopHoldMove);
+
+  btn.addEventListener("touchstart",(e)=>{e.preventDefault(); startHoldMove(dx,dy);},{passive:false});
+  btn.addEventListener("touchend",stopHoldMove);
+  btn.addEventListener("touchcancel",stopHoldMove);
+});
+
+/** Win + confetti */
+function win(){
+  finalMsg.textContent = FINAL_MESSAGE;
+  overlay.classList.add("show");
+  burstConfetti();
+}
+function closeWin(){
+  overlay.classList.remove("show");
+  resetGame();
+}
+
+function burstConfetti(){
+  const Np=120;
+  for(let i=0;i<Np;i++){
+    const p=document.createElement("div");
+    p.style.position="fixed";
+    p.style.left=(Math.random()*100)+"vw";
+    p.style.top=(-12)+"px";
+    p.style.width=(6+Math.random()*10)+"px";
+    p.style.height=(10+Math.random()*16)+"px";
+    p.style.borderRadius="6px";
+    p.style.background=`hsl(${Math.floor(Math.random()*360)},95%,60%)`;
+    p.style.zIndex=60;
+    p.style.opacity="0.98";
+    document.body.appendChild(p);
+
+    const fall=900+Math.random()*800;
+    const drift=(Math.random()*2-1)*260;
+    const spin=(Math.random()*2-1)*720;
+
+    p.animate([
+      {transform:`translate(0,0) rotate(0deg)`},
+      {transform:`translate(${drift}px, ${window.innerHeight+140}px) rotate(${spin}deg)`}
+    ],{duration:fall,easing:"cubic-bezier(.2,.7,.2,1)"});
+
+    setTimeout(()=>p.remove(),fall+60);
+  }
+}
+</script>
+</body>
+</html>
